@@ -51,50 +51,40 @@ openChatButton.addEventListener("click", () => {
   const form = document.getElementById("chat-form");
   const input = document.getElementById("chat-input");
   const messages = document.getElementById("chat-messages");
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
+  const question = input.value.trim();
+  if (!question) return;
 
-    const question = input.value.trim();
-    if (!question) return;
+  addMessage(question, "user-message");
+  input.value = "";
 
-    addMessage(question, "user-message");
-    input.value = "";
+  const submitButton = form.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
 
-    const submitButton = form.querySelector('button[type="submit"]');
-    submitButton.disabled = true;
+  const q = question.toLowerCase();
+  let instantAnswer = null;
 
-    const loading = addMessage("Thinking...", "assistant-message");
+  if (q.includes("hour") || q.includes("open") || q.includes("opening")) {
+    instantAnswer = "We are open Monday to Friday, 09:00–18:00, and Saturday, 09:00–13:00. We are closed on Sundays.";
+  } else if (q.includes("service") || q.includes("treat") || q.includes("offer")) {
+    instantAnswer = "We offer general physiotherapy, sports injury rehabilitation, back and neck pain treatment, and mobility and recovery exercises.";
+  } else if (q.includes("appointment") || q.includes("book") || q.includes("schedule")) {
+    instantAnswer = "You can contact Fysio Centrum Kralingen directly to request an appointment. This demo cannot confirm bookings.";
+  } else if (q.includes("insurance") || q.includes("coverage") || q.includes("price") || q.includes("cost")) {
+    instantAnswer = "Insurance coverage and treatment costs depend on your individual policy and treatment. Please contact the clinic and your insurer for confirmation.";
+  } else if (q.includes("location") || q.includes("address") || q.includes("where")) {
+    instantAnswer = "Fysio Centrum Kralingen is located in Rotterdam, Netherlands. Please contact the clinic for the exact address.";
+  }
+  const answer = instantAnswer || getDemoAnswer(question);
 
-    try {
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/plain;charset=utf-8"
-        },
-        body: JSON.stringify({ message: question })
-      });
+  addMessage(answer, "assistant-message");
 
-      const data = await response.json();
-      loading.remove();
-
-      if (!response.ok || data.error || !data.reply) {
-        throw new Error("Gemini request failed");
-      }
-
-      addMessage(data.reply, "assistant-message");
-    } catch (error) {
-      loading.remove();
-      addMessage(
-        getDemoAnswer(question),
-        "assistant-message"
-      );
-    } finally {
-      submitButton.disabled = false;
-      input.focus();
-    }
-  });
-
+  submitButton.disabled = false;
+  input.focus();
+});  
+  
   function addMessage(text, className) {
     const message = document.createElement("div");
     message.className = `message ${className}`;
