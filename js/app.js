@@ -1,5 +1,7 @@
 const openChatButton = document.getElementById("open-chat");
 
+const API_URL = "https://script.google.com/macros/s/AKfycbyxQvItSMvTZa2iK2AU7Cz9DvigL1YAWKGj12NFfxqS6AuQ8S-MDuARKB4g52Qli0Y6jQ/exec";
+
 openChatButton.addEventListener("click", () => {
   let chat = document.getElementById("chat-widget");
 
@@ -11,6 +13,7 @@ openChatButton.addEventListener("click", () => {
   chat = document.createElement("section");
   chat.id = "chat-widget";
   chat.className = "chat-widget";
+
   chat.innerHTML = `
     <div class="chat-header">
       <div>
@@ -49,7 +52,7 @@ openChatButton.addEventListener("click", () => {
   const input = document.getElementById("chat-input");
   const messages = document.getElementById("chat-messages");
 
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const question = input.value.trim();
@@ -58,8 +61,38 @@ openChatButton.addEventListener("click", () => {
     addMessage(question, "user-message");
     input.value = "";
 
-    const answer = getDemoAnswer(question);
-    setTimeout(() => addMessage(answer, "assistant-message"), 300);
+    const submitButton = form.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+
+    const loading = addMessage("Thinking...", "assistant-message");
+
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify({ message: question })
+      });
+
+      const data = await response.json();
+      loading.remove();
+
+      if (!response.ok || data.error || !data.reply) {
+        throw new Error("Gemini request failed");
+      }
+
+      addMessage(data.reply, "assistant-message");
+    } catch (error) {
+      loading.remove();
+      addMessage(
+        getDemoAnswer(question),
+        "assistant-message"
+      );
+    } finally {
+      submitButton.disabled = false;
+      input.focus();
+    }
   });
 
   function addMessage(text, className) {
@@ -68,6 +101,7 @@ openChatButton.addEventListener("click", () => {
     message.textContent = text;
     messages.appendChild(message);
     messages.scrollTop = messages.scrollHeight;
+    return message;
   }
 
   function getDemoAnswer(question) {
@@ -82,7 +116,7 @@ openChatButton.addEventListener("click", () => {
     }
 
     if (q.includes("appointment") || q.includes("book") || q.includes("schedule")) {
-      return "I can help you prepare an appointment request. Please note that this demo does not confirm bookings. Contact the clinic directly to confirm availability.";
+      return "I can help you prepare an appointment request. This demo does not confirm bookings. Contact the clinic directly to confirm availability.";
     }
 
     if (q.includes("referral") || q.includes("doctor")) {
